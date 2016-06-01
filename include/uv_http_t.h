@@ -57,7 +57,6 @@ struct uv_http_req_s {
   /* Public fields */
   unsigned short http_major;
   unsigned short http_minor;
-  unsigned int status_code;
   uv_http_method_t method;
 
   uv_http_req_value_cb on_header_field;

@@ -18,7 +18,11 @@ struct uv_http_s {
 
   uv_http_req_handler_cb request_handler;
 
-  uv_http_req_t tmp_req;
+  struct {
+    unsigned short http_major;
+    unsigned short http_minor;
+    uv_http_method_t method;
+  } tmp_req;
   uv_http_req_t* last_req;
 
   unsigned int reading:2;

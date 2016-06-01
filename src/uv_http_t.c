@@ -60,6 +60,7 @@ fail_link_init:
 
 void uv_http_destroy(uv_http_t* http, uv_link_t* source, uv_link_close_cb cb) {
   /* TODO(indutny): implement me */
+  cb(source);
 }
 
 
@@ -144,13 +145,17 @@ int uv_http_accept(uv_http_t* http, uv_http_req_t* req) {
   if (err != 0)
     return err;
 
-  *req = http->tmp_req;
+  req->http_major = http->tmp_req.http_major;
+  req->http_minor = http->tmp_req.http_minor;
+  req->method = http->tmp_req.method;
+
   http->last_req =req;
   return 0;
 }
 
 
 int uv_http_read_start(uv_http_t* http, uv_http_side_t side) {
+  unsigned int old;
   int err;
 
   if (side == kUVHTTPSideRequest &&
@@ -160,7 +165,10 @@ int uv_http_read_start(uv_http_t* http, uv_http_side_t side) {
       return err;
   }
 
+  old = http->reading;
   http->reading |= (unsigned int) side;
+  if (old == http->reading)
+    return 0;
 
   /* Wait until both reading sides will request reads */
   if ((http->reading & kReadingMask) != kReadingMask)
@@ -176,7 +184,13 @@ int uv_http_read_start(uv_http_t* http, uv_http_side_t side) {
 
 
 int uv_http_read_stop(uv_http_t* http, uv_http_side_t side) {
+  unsigned int old;
+
+  old = http->reading;
   http->reading &= ~(unsigned int) side;
+  if (old == http->reading)
+    return 0;
+
   http_parser_pause(&http->parser, 1);
   return uv_link_read_stop(http->parent);
 }
@@ -186,14 +200,12 @@ int uv_http_read_stop(uv_http_t* http, uv_http_side_t side) {
 
 int uv_http_on_message_begin(http_parser* parser) {
   uv_http_t* http;
-  uv_http_req_t* req;
 
   http = container_of(parser, uv_http_t, parser);
 
-  req = &http->tmp_req;
-  req->http_major = parser->http_major;
-  req->http_minor = parser->http_minor;
-  req->method = uv_http_convert_method(parser->method);
+  http->tmp_req.http_major = parser->http_major;
+  http->tmp_req.http_minor = parser->http_minor;
+  http->tmp_req.method = uv_http_convert_method(parser->method);
 
   http->last_req = NULL;
 
@@ -210,6 +222,12 @@ int uv_http_on_url(http_parser* parser, const char* value,
   /* TODO(indutny): is there any reason to loosen this? */
   CHECK_NE(http->last_req, NULL, "request_handler must accept request");
 
+  /* Requests starts in not-reading mode */
+  if (!http->last_req->reading &&
+      uv_http_read_stop(http, kUVHTTPSideRequest) != 0) {
+    return -1;
+  }
+
   return 0;
 }
 
@@ -217,6 +235,11 @@ int uv_http_on_url(http_parser* parser, const char* value,
 int uv_http_on_headers_complete(http_parser* parser) {
   uv_http_t* http;
   http = container_of(parser, uv_http_t, parser);
+
+  /* Faciliate light servers */
+  if (http->last_req->on_headers_complete == NULL)
+    return 0;
+
   return http->last_req->on_headers_complete(http->last_req);
 }
 
@@ -242,6 +265,11 @@ int uv_http_on_header_field(http_parser* parser, const char* value,
                             size_t length) {
   uv_http_t* http;
   http = container_of(parser, uv_http_t, parser);
+
+  /* Faciliate light servers */
+  if (http->last_req->on_header_field == NULL)
+    return 0;
+
   return http->last_req->on_header_field(http->last_req, value, length);
 }
 
@@ -250,6 +278,11 @@ int uv_http_on_header_value(http_parser* parser, const char* value,
                             size_t length) {
   uv_http_t* http;
   http = container_of(parser, uv_http_t, parser);
+
+  /* Faciliate light servers */
+  if (http->last_req->on_header_value == NULL)
+    return 0;
+
   return http->last_req->on_header_value(http->last_req, value, length);
 }
 

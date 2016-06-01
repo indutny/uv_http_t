@@ -20,7 +20,6 @@ static int close_cb_called;
 static struct {
   uv_pipe_t pipe;
   uv_link_source_t source;
-  uv_link_observer_t observer;
   uv_http_t* http;
 } server;
 
@@ -94,19 +93,11 @@ static void http_client_server_test(void (*client_fn)(int fd),
   CHECK_NE(server.http = uv_http_create(handler, &err), NULL,
            "uv_http_create(server.http)");
 
-  /* Create observer */
-  CHECK_EQ(uv_link_observer_init(&server.observer), 0,
-           "uv_link_observer_init(server.observer)");
-
   /* Chain server's links */
   CHECK_EQ(uv_link_chain((uv_link_t*) &server.source,
                          (uv_link_t*) server.http),
            0,
            "uv_link_chain(server.source)");
-  CHECK_EQ(uv_link_chain((uv_link_t*) server.http,
-                         (uv_link_t*) &server.observer),
-           0,
-           "uv_link_chain(server.http)");
 
   /* Start client thread */
 
@@ -114,7 +105,7 @@ static void http_client_server_test(void (*client_fn)(int fd),
            "uv_thread_create(client.thread)");
 
   /* Pre-start server */
-  CHECK_EQ(uv_link_read_start((uv_link_t*) &server.observer), 0,
+  CHECK_EQ(uv_link_read_start((uv_link_t*) server.http), 0,
            "uv_link_read_start()");
 
   CHECK_EQ(uv_run(loop, UV_RUN_DEFAULT), 0, "uv_run() post");
@@ -123,7 +114,7 @@ static void http_client_server_test(void (*client_fn)(int fd),
 
   /* Free resources */
 
-  uv_link_close((uv_link_t*) &server.observer, close_cb);
+  uv_link_close((uv_link_t*) server.http, close_cb);
 
   CHECK_EQ(uv_run(loop, UV_RUN_DEFAULT), 0, "uv_run() post");
   CHECK_EQ(close_cb_called, 1, "close_cb must be called");
