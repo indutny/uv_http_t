@@ -20,7 +20,8 @@ struct uv_http_s {
 
   uv_http_req_handler_cb request_handler;
 
-  uv_http_req_t* current_req;
+  uv_http_req_t* active_req;
+  uv_http_req_t* last_req;
   unsigned int active_reqs;
 
   uv_link_close_cb close_cb;

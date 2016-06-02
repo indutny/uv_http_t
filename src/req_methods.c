@@ -39,7 +39,7 @@ static int uv_http_req_link_try_write(uv_link_t* link,
   req = (uv_http_req_t*) link;
 
   /* Try write works only for an active request */
-  if (req->http->current_req != req)
+  if (req->http->active_req != req)
     return 0;
 
   /* TODO(indutny): implement writes */

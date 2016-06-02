@@ -51,6 +51,13 @@ enum uv_http_method_e {
 };
 typedef enum uv_http_method_e uv_http_method_t;
 
+/* Flags, actually */
+enum uv_http_req_state_e {
+  kUVHTTPReqStateEnd = 0x1,
+  kUVHTTPReqStateFinished = 0x2,
+};
+typedef enum uv_http_req_state_e uv_http_req_state_t;
+
 struct uv_http_req_s {
   UV_LINK_FIELDS
 
@@ -66,8 +73,10 @@ struct uv_http_req_s {
   uv_http_req_cb on_headers_complete;
 
   /* Private fields */
+  uv_http_req_state_t state;
   unsigned int reading: 1;
   unsigned int pending_eof: 1;
+  uv_http_req_t* next;
 };
 
 UV_EXTERN uv_http_t* uv_http_create(uv_http_req_handler_cb cb, int* err);

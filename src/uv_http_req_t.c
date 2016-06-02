@@ -107,6 +107,9 @@ int uv_http_req_respond(uv_http_req_t* req,
   for (i = 0; i < nbufs; i++)
     total += bufs[i].len;
 
+  /* XXX(indutny): should check that the req is active */
+  CHECK_EQ(req->http->active_req, req, "No queueing yet");
+
   err = uv_link_try_write(http->parent, bufs, nbufs);
   if (err < 0)
     goto done;
