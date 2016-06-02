@@ -83,7 +83,7 @@ struct uv_http_req_s {
   uv_http_req_active_cb on_active;
 
   /* Private fields */
-  uv_http_req_state_t state;
+  unsigned int state: 2;
   unsigned int reading: 1;
   unsigned int pending_eof: 1;
   uv_http_req_t* next;
