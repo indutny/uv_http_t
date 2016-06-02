@@ -53,18 +53,6 @@ int uv_http_req_consume(uv_http_t* http, uv_http_req_t* req,
 }
 
 
-void uv_http_req_error(uv_http_t* http, uv_http_req_t* req, int err) {
-  /* TODO(indutny): implement me */
-  uv_http_req_active_cb cb;
-
-  cb = req->on_active;
-  if (cb != NULL) {
-    req->on_active = NULL;
-    cb(req, UV_ECANCELED);
-  }
-}
-
-
 void uv_http_req_on_active(uv_http_req_t* req, uv_http_req_active_cb cb) {
   if (req->http->active_req == req)
     return cb(req, 0);

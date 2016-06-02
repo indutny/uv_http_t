@@ -173,6 +173,7 @@ int uv_http_process_pending(uv_http_t* http, uv_http_side_t side) {
 }
 
 
+/* Called on `uv_link_shutdown(req)` or `uv_link_close(req)` */
 void uv_http_on_req_finish(uv_http_t* http, uv_http_req_t* req) {
   uv_http_req_active_cb cb;
 
@@ -192,6 +193,18 @@ void uv_http_on_req_finish(uv_http_t* http, uv_http_req_t* req) {
 
 void uv_http_error(uv_http_t* http, int err) {
   /* TODO(indutny): implement me */
+}
+
+
+void uv_http_req_error(uv_http_t* http, uv_http_req_t* req, int err) {
+  /* TODO(indutny): implement me */
+  uv_http_req_active_cb cb;
+
+  cb = req->on_active;
+  if (cb != NULL) {
+    req->on_active = NULL;
+    cb(req, UV_ECANCELED);
+  }
 }
 
 
@@ -221,6 +234,7 @@ int uv_http_accept(uv_http_t* http, uv_http_req_t* req) {
   req->on_headers_complete = NULL;
   req->on_active = NULL;
 
+  /* Link to next pending request */
   req->next = NULL;
 
   req->http = http;
@@ -244,6 +258,9 @@ int uv_http_read_start(uv_http_t* http, uv_http_side_t side) {
   unsigned int old;
   int err;
 
+  /* Process pending data for request, even if the connection itself is
+   * paused
+   */
   if (side == kUVHTTPSideRequest &&
       (http->reading & kUVHTTPSideRequest) == 0) {
     err = uv_http_process_pending(http, side);
@@ -320,11 +337,11 @@ int uv_http_on_field(uv_http_t* http, uv_http_header_state_t next,
         req = http->last_req;
         break;
       case kUVHTTPHeaderStateField:
-        if (req != NULL && req->on_header_field != NULL)
+        if (req->on_header_field != NULL)
           err = req->on_header_field(req, data->value, data->size);
         break;
       case kUVHTTPHeaderStateValue:
-        if (req != NULL && req->on_header_value != NULL)
+        if (req->on_header_value != NULL)
           err = req->on_header_value(req, data->value, data->size);
         break;
       default:
@@ -338,8 +355,6 @@ int uv_http_on_field(uv_http_t* http, uv_http_header_state_t next,
 
     uv_http_data_dequeue(data, data->size);
     http->pending.header_state = next;
-    if (req == NULL)
-      return 0;
   }
 
   /* Faciliate light requests */
