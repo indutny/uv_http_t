@@ -80,6 +80,7 @@ int uv_http_req_respond(uv_http_req_t* req,
   char status_str[16];
   size_t status_len;
   uv_buf_t* bufs;
+  uv_buf_t* pbufs;
   unsigned int nbufs;
   unsigned int i;
   int err;
@@ -129,13 +130,28 @@ int uv_http_req_respond(uv_http_req_t* req,
     goto done;
 
   /* Fully written */
-  if (err == (int) total) {
+  if ((size_t) err == total) {
     err = 0;
     goto done;
   }
 
   /* Partial write, queue rest */
-  err = uv_link_propagate_write(http->parent, (uv_link_t*) req, bufs, nbufs,
+  pbufs = bufs;
+  for (; nbufs > 0; pbufs++, nbufs--) {
+    /* Slice */
+    if (pbufs[0].len > (size_t) err) {
+      pbufs[0].base += err;
+      pbufs[0].len -= err;
+      err = 0;
+      break;
+
+    /* Discard */
+    } else {
+      err -= pbufs[0].len;
+    }
+  }
+
+  err = uv_link_propagate_write(http->parent, (uv_link_t*) req, pbufs, nbufs,
                                 NULL, uv_http_req_write_cb, NULL);
 
 done:
