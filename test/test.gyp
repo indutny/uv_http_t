@@ -16,6 +16,7 @@
     "sources": [
       "src/main.c",
       "src/test-req-no-headers.c",
+      "src/test-req-with-headers.c",
     ],
   }],
 }

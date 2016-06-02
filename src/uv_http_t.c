@@ -309,6 +309,7 @@ int uv_http_on_field(uv_http_t* http, uv_http_header_state_t next,
     case kUVHTTPHeaderStateComplete:
       if (req->on_headers_complete == NULL)
         return 0;
+      req->on_headers_complete(req);
       break;
     default:
       break;
@@ -368,12 +369,6 @@ int uv_http_on_headers_complete(http_parser* parser) {
     return -1;
   }
   return 0;
-
-  /* Faciliate light servers */
-  if (http->current_req->on_headers_complete == NULL)
-    return 0;
-
-  return http->current_req->on_headers_complete(http->current_req);
 }
 
 

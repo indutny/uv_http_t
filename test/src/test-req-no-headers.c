@@ -44,11 +44,12 @@ static void req_no_headers_server(uv_http_t* http,
   CHECK_EQ(strncmp("/some/path", url, url_len), 0, "URL should match");
   CHECK_EQ(uv_http_accept(http, &req), 0, "uv_http_accept()");
 
-  CHECK_EQ(uv_link_read_start((uv_link_t*) &req), 0, "uv_read_start(req)");
   CHECK_EQ(uv_link_observer_init(&req_observer), 0,
            "uv_link_observer_init(req_observer)");
   CHECK_EQ(uv_link_chain((uv_link_t*) &req, (uv_link_t*) &req_observer), 0,
            "uv_link_chain(req, req_observer)");
+  CHECK_EQ(uv_link_read_start((uv_link_t*) &req_observer), 0,
+           "uv_read_start(req)");
 
   req_observer.observer_read_cb = req_observer_read_cb;
 }
