@@ -12,7 +12,11 @@ static void req_respond_client(int fd) {
   len = client_receive(buf, sizeof(buf));
 
   /* TODO(indutny): Could be partial read, do something about it */
-  CHECK_EQ(strncmp(buf, "HTTP/1.1 200 OK\r\nABC: DEF\r\nX-Something: some-value\r\n\r\n", len), 0, "expected data");
+  CHECK_EQ(strncmp(buf, "HTTP/1.1 200 OK\r\n"
+                        "ABC: DEF\r\n"
+                        "X-Something: some-value\r\n"
+                        "Transfer-Encoding: chunked\r\n\r\n", len),
+           0, "expected data");
 }
 
 

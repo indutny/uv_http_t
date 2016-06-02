@@ -69,6 +69,9 @@ struct uv_http_req_s {
   unsigned short http_minor;
   uv_http_method_t method;
 
+  /* Use chunked encoding, `1` by default */
+  unsigned int chunked:1;
+
   uv_http_req_value_cb on_header_field;
   uv_http_req_value_cb on_header_value;
   uv_http_req_cb on_headers_complete;

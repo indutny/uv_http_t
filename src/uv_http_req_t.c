@@ -92,6 +92,9 @@ int uv_http_req_respond(uv_http_req_t* req,
 
   /* TODO(indutny): default message */
   nbufs = header_count * 4 + 3;
+  if (req->chunked)
+    nbufs++;
+
   if (nbufs > ARRAY_SIZE(buf_storage))
     bufs = malloc(nbufs * sizeof(*bufs));
   else
@@ -112,7 +115,10 @@ int uv_http_req_respond(uv_http_req_t* req,
     bufs[i * 4 + 5] = header_values[i];
     bufs[i * 4 + 6] = uv_buf_init("\r\n", 2);
   }
-  bufs[nbufs - 1] = uv_buf_init("\r\n\r\n", 4);
+  if (req->chunked)
+    bufs[nbufs - 1] = uv_buf_init("Transfer-Encoding: chunked\r\n\r\n", 30);
+  else
+    bufs[nbufs - 1] = uv_buf_init("\r\n\r\n", 4);
 
   total = 0;
   for (i = 0; i < nbufs; i++)

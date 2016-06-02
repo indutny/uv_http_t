@@ -194,6 +194,7 @@ int uv_http_accept(uv_http_t* http, uv_http_req_t* req) {
   req->http_major = http->parser.http_major;
   req->http_minor = http->parser.http_minor;
   req->method = uv_http_convert_method(http->parser.method);
+  req->chunked = 1;
   req->state = 0;
 
   /* Zero callbacks */
