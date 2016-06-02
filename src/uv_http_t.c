@@ -58,8 +58,8 @@ uv_http_t* uv_http_create(uv_http_req_handler_cb cb, int* err) {
 
   uv_http_data_init(&res->pending_data, NULL, 0);
   uv_http_data_init(&res->pending_req_data, NULL, 0);
-  uv_http_data_init(&res->pending_url, res->url_storage,
-                    sizeof(res->url_storage));
+  uv_http_data_init(&res->pending_str, res->pending_str_storage,
+                    sizeof(res->pending_str_storage));
 
   return res;
 
@@ -72,7 +72,7 @@ fail_link_init:
 void uv_http_free(uv_http_t* http) {
   uv_http_data_free(&http->pending_data);
   uv_http_data_free(&http->pending_req_data);
-  uv_http_data_free(&http->pending_url);
+  uv_http_data_free(&http->pending_str);
   free(http);
 }
 
@@ -242,8 +242,8 @@ int uv_http_request_maybe(uv_http_t* http) {
   if (http->current_req != NULL)
     return 0;
 
-  http->request_handler(http, http->pending_url.value, http->pending_url.size);
-  uv_http_data_dequeue(&http->pending_url, http->pending_url.size);
+  http->request_handler(http, http->pending_str.value, http->pending_str.size);
+  uv_http_data_dequeue(&http->pending_str, http->pending_str.size);
 
   /* TODO(indutny): is there any reason to loosen this? */
   CHECK_NE(http->current_req, NULL, "request_handler must accept request");
