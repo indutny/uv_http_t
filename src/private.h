@@ -25,6 +25,8 @@ struct uv_http_s {
   uv_http_req_t* last_req;
   unsigned int active_reqs;
 
+  int pending_err;
+
   uv_link_close_cb close_cb;
   uv_link_t* close_source;
 

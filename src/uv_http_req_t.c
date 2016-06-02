@@ -66,8 +66,9 @@ void uv_http_req_write_cb(uv_link_t* link, int status, void* arg) {
 
   req = (uv_http_req_t*) link;
 
+  /* Unfortunately, write errors are global */
   if (status != 0)
-    uv_http_req_error(req->http, req, status);
+    uv_http_error(req->http, status);
 }
 
 

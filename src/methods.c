@@ -4,6 +4,8 @@ static int uv_http_link_read_start(uv_link_t* link) {
   uv_http_t* http;
   http = (uv_http_t*) link;
 
+  if (http->pending_err != 0)
+    return http->pending_err;
   return uv_http_read_start(http, kUVHTTPSideConnection);
 }
 
@@ -12,6 +14,8 @@ static int uv_http_link_read_stop(uv_link_t* link) {
   uv_http_t* http;
   http = (uv_http_t*) link;
 
+  if (http->pending_err != 0)
+    return http->pending_err;
   return uv_http_read_stop(http, kUVHTTPSideConnection);
 }
 
@@ -23,6 +27,10 @@ static int uv_http_link_write(uv_link_t* link,
                               uv_stream_t* send_handle,
                               uv_link_write_cb cb,
                               void* arg) {
+  uv_http_t* http;
+  http = (uv_http_t*) link;
+  if (http->pending_err != 0)
+    return http->pending_err;
   /* No support for writes */
   return UV_ENOSYS;
 }
@@ -31,6 +39,10 @@ static int uv_http_link_write(uv_link_t* link,
 static int uv_http_link_try_write(uv_link_t* link,
                                   const uv_buf_t bufs[],
                                   unsigned int nbufs) {
+  uv_http_t* http;
+  http = (uv_http_t*) link;
+  if (http->pending_err != 0)
+    return http->pending_err;
   /* No support for writes */
   return UV_ENOSYS;
 }
@@ -40,6 +52,10 @@ static int uv_http_link_shutdown(uv_link_t* link,
                                  uv_link_t* source,
                                  uv_link_shutdown_cb cb,
                                  void* arg) {
+  uv_http_t* http;
+  http = (uv_http_t*) link;
+  if (http->pending_err != 0)
+    return http->pending_err;
   return uv_link_propagate_shutdown(link->parent, source, cb, arg);
 }
 

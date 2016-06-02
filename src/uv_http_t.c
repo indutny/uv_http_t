@@ -191,13 +191,21 @@ void uv_http_on_req_finish(uv_http_t* http, uv_http_req_t* req) {
 }
 
 
+/* Global error - kill all requests */
 void uv_http_error(uv_http_t* http, int err) {
-  /* TODO(indutny): implement me */
+  uv_http_req_t* req;
+
+  for (req = http->active_req; req != NULL; req = req->next)
+    uv_http_req_error(http, req, UV_ECANCELED);
+
+  if ((http->reading & kUVHTTPSideConnection) == 0)
+    uv_link_propagate_read_cb((uv_link_t*) http, err, NULL);
+  else if (http->pending_err == 0)
+    http->pending_err = err;
 }
 
 
 void uv_http_req_error(uv_http_t* http, uv_http_req_t* req, int err) {
-  /* TODO(indutny): implement me */
   uv_http_req_active_cb cb;
 
   cb = req->on_active;
@@ -205,6 +213,11 @@ void uv_http_req_error(uv_http_t* http, uv_http_req_t* req, int err) {
     req->on_active = NULL;
     cb(req, UV_ECANCELED);
   }
+
+  if (req->reading)
+    uv_link_propagate_read_cb((uv_link_t*) req, err, NULL);
+  else
+    req->pending_err = err;
 }
 
 
@@ -214,6 +227,8 @@ int uv_http_accept(uv_http_t* http, uv_http_req_t* req) {
   if (!http->pending_accept)
     return UV_EAGAIN;
 
+  memset(req, 0, sizeof(*req));
+
   err = uv_link_init((uv_link_t*) req, &uv_http_req_methods);
   if (err != 0)
     return err;
@@ -222,20 +237,6 @@ int uv_http_accept(uv_http_t* http, uv_http_req_t* req) {
   req->http_minor = http->parser.http_minor;
   req->method = uv_http_convert_method(http->parser.method);
   req->chunked = 1;
-  req->state = 0;
-  req->reading = 0;
-  req->pending_eof = 0;
-  req->has_response = 0;
-  req->shutdown = 0;
-
-  /* Zero callbacks */
-  req->on_header_field = NULL;
-  req->on_header_value = NULL;
-  req->on_headers_complete = NULL;
-  req->on_active = NULL;
-
-  /* Link to next pending request */
-  req->next = NULL;
 
   req->http = http;
 

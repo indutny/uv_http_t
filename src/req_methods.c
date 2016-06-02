@@ -4,10 +4,17 @@ static int uv_http_req_link_read_start(uv_link_t* link) {
   uv_http_req_t* req;
 
   req = (uv_http_req_t*) link;
+  if (req->pending_err != 0)
+    return req->pending_err;
+
   if (req->reading)
     return 0;
 
-  /* TODO(indutny): check pending eof */
+  if (req->pending_eof) {
+    uv_link_propagate_read_cb(link, UV_EOF, NULL);
+    req->pending_eof = 0;
+  }
+
   req->reading = 1;
   if (req->http->last_req == req)
     return uv_http_read_start(req->http, kUVHTTPSideRequest);
@@ -20,6 +27,9 @@ static int uv_http_req_link_read_stop(uv_link_t* link) {
   uv_http_req_t* req;
 
   req = (uv_http_req_t*) link;
+  if (req->pending_err != 0)
+    return req->pending_err;
+
   if (!req->reading)
     return 0;
 
@@ -44,6 +54,8 @@ static int uv_http_req_link_write(uv_link_t* link,
   int err;
 
   req = (uv_http_req_t*) link;
+  if (req->pending_err != 0)
+    return req->pending_err;
 
   /* No IPC on HTTP requests */
   if (send_handle != NULL)
@@ -70,6 +82,11 @@ static int uv_http_req_link_write(uv_link_t* link,
 static int uv_http_req_link_try_write(uv_link_t* link,
                                       const uv_buf_t bufs[],
                                       unsigned int nbufs) {
+  uv_http_req_t* req;
+
+  req = (uv_http_req_t*) link;
+  if (req->pending_err != 0)
+    return req->pending_err;
   /* Try write is not supported because of chunked encoding */
   return UV_ENOSYS;
 }
@@ -84,6 +101,8 @@ static int uv_http_req_link_shutdown(uv_link_t* link,
   int err;
 
   req = (uv_http_req_t*) link;
+  if (req->pending_err != 0)
+    return req->pending_err;
 
   /* Shutdown works only for an active request */
   if (req->http->active_req != req)

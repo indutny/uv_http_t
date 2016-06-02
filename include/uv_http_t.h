@@ -88,6 +88,7 @@ struct uv_http_req_s {
   unsigned int pending_eof: 1;
   unsigned int has_response: 1;
   unsigned int shutdown: 1;
+  int pending_err;
   uv_http_req_t* next;
 };
 
