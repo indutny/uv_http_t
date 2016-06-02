@@ -1,6 +1,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "include/uv_http_t.h"
+#include "http_parser.h"
+
 #include "src/utils.h"
 #include "src/common.h"
 
@@ -77,4 +80,44 @@ int uv_http_data_grow(uv_http_data_t* data, size_t new_size) {
   data->value = tmp;
   data->limit = new_size;
   return 0;
+}
+
+
+uv_http_method_t uv_http_convert_method(enum http_method method) {
+  switch (method) {
+    case HTTP_DELETE: return UV_HTTP_DELETE;
+    case HTTP_GET: return UV_HTTP_GET;
+    case HTTP_HEAD: return UV_HTTP_HEAD;
+    case HTTP_POST: return UV_HTTP_POST;
+    case HTTP_PUT: return UV_HTTP_PUT;
+    case HTTP_CONNECT: return UV_HTTP_CONNECT;
+    case HTTP_OPTIONS: return UV_HTTP_OPTIONS;
+    case HTTP_TRACE: return UV_HTTP_TRACE;
+    case HTTP_COPY: return UV_HTTP_COPY;
+    case HTTP_LOCK: return UV_HTTP_LOCK;
+    case HTTP_MKCOL: return UV_HTTP_MKCOL;
+    case HTTP_MOVE: return UV_HTTP_MOVE;
+    case HTTP_PROPFIND: return UV_HTTP_PROPFIND;
+    case HTTP_PROPPATCH: return UV_HTTP_PROPPATCH;
+    case HTTP_SEARCH: return UV_HTTP_SEARCH;
+    case HTTP_UNLOCK: return UV_HTTP_UNLOCK;
+    case HTTP_BIND: return UV_HTTP_BIND;
+    case HTTP_REBIND: return UV_HTTP_REBIND;
+    case HTTP_UNBIND: return UV_HTTP_UNBIND;
+    case HTTP_ACL: return UV_HTTP_ACL;
+    case HTTP_REPORT: return UV_HTTP_REPORT;
+    case HTTP_MKACTIVITY: return UV_HTTP_MKACTIVITY;
+    case HTTP_CHECKOUT: return UV_HTTP_CHECKOUT;
+    case HTTP_MERGE: return UV_HTTP_MERGE;
+    case HTTP_MSEARCH: return UV_HTTP_MSEARCH;
+    case HTTP_NOTIFY: return UV_HTTP_NOTIFY;
+    case HTTP_SUBSCRIBE: return UV_HTTP_SUBSCRIBE;
+    case HTTP_UNSUBSCRIBE: return UV_HTTP_UNSUBSCRIBE;
+    case HTTP_PATCH: return UV_HTTP_PATCH;
+    case HTTP_PURGE: return UV_HTTP_PURGE;
+    case HTTP_MKCALENDAR: return UV_HTTP_MKCALENDAR;
+    case HTTP_LINK: return UV_HTTP_LINK;
+    case HTTP_UNLINK: return UV_HTTP_UNLINK;
+    default: CHECK(0, "Unexpected method");
+  }
 }

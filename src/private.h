@@ -7,6 +7,14 @@
 #include "src/utils.h"
 #include "src/queue.h"
 
+enum uv_http_header_state_e {
+  kUVHTTPHeaderStateURL,
+  kUVHTTPHeaderStateField,
+  kUVHTTPHeaderStateValue,
+  kUVHTTPHeaderStateComplete
+};
+typedef enum uv_http_header_state_e uv_http_header_state_t;
+
 struct uv_http_s {
   UV_LINK_FIELDS
 
@@ -28,13 +36,17 @@ struct uv_http_s {
   http_parser parser;
   http_parser_settings parser_settings;
 
-  uv_http_data_t pending_data;
-  uv_http_data_t pending_req_data;
-  uv_http_data_t pending_str;
+  struct {
+    uv_http_data_t data;
+    uv_http_data_t req_data;
 
-  /* TODO(indutny): consider increasing it, the idea is to handle the
-   * most common length of URLs */
-  char pending_str_storage[512];
+    uv_http_data_t url_or_header;
+    uv_http_header_state_t header_state;
+
+    /* TODO(indutny): consider increasing it, the idea is to handle the
+     * most common length of URLs */
+    char storage[512];
+  } pending;
 };
 
 /* NOTE: used as flags too */
