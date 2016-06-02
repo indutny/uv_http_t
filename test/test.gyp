@@ -18,6 +18,7 @@
       "src/test-req-no-headers.c",
       "src/test-req-with-headers.c",
       "src/test-req-respond.c",
+      "src/test-req-write.c",
     ],
   }],
 }

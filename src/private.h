@@ -64,12 +64,17 @@ int uv_http_consume(uv_http_t* http, const char* data, size_t size);
 void uv_http_error(uv_http_t* http, int err);
 void uv_http_on_req_close(uv_http_t* http, uv_http_req_t* req);
 
+int uv_http_read_start(uv_http_t* http, uv_http_side_t side);
+int uv_http_read_stop(uv_http_t* http, uv_http_side_t side);
+
+/* Request related */
 void uv_http_req_error(uv_http_t* http, uv_http_req_t* req, int err);
 void uv_http_req_eof(uv_http_t* http, uv_http_req_t* req);
 int uv_http_req_consume(uv_http_t* http, uv_http_req_t* req,
                         const char* data, size_t size);
-
-int uv_http_read_start(uv_http_t* http, uv_http_side_t side);
-int uv_http_read_stop(uv_http_t* http, uv_http_side_t side);
+int uv_http_req_prepare_write(uv_http_req_t* req,
+                              uv_buf_t* storage, unsigned int nstorage,
+                              const uv_buf_t* bufs, unsigned int nbufs,
+                              uv_buf_t** pbufs, unsigned int* npbufs);
 
 #endif  /* SRC_PRIVATE_H_ */

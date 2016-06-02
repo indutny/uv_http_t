@@ -202,6 +202,9 @@ int uv_http_accept(uv_http_t* http, uv_http_req_t* req) {
   req->method = uv_http_convert_method(http->parser.method);
   req->chunked = 1;
   req->state = 0;
+  req->reading = 0;
+  req->pending_eof = 0;
+  req->has_response = 0;
 
   /* Zero callbacks */
   req->on_header_field = NULL;

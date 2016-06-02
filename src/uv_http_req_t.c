@@ -1,3 +1,5 @@
+#include <string.h>
+
 #include "src/common.h"
 #include "src/utils.h"
 
@@ -100,6 +102,10 @@ int uv_http_req_respond(uv_http_req_t* req,
 
   http = req->http;
 
+  /* Double respond */
+  if (req->has_response)
+    return UV_EPROTO;
+
   if (req->http->active_req != req)
     return UV_EAGAIN;
 
@@ -170,5 +176,48 @@ done:
   if (bufs != buf_storage)
     free(bufs);
 
+  if (err == 0)
+    req->has_response = 1;
+
   return err;
+}
+
+
+int uv_http_req_prepare_write(uv_http_req_t* req,
+                              uv_buf_t* storage, unsigned int nstorage,
+                              const uv_buf_t* bufs, unsigned int nbufs,
+                              uv_buf_t** pbufs, unsigned int* npbufs) {
+  size_t total;
+  unsigned int i;
+  char prefix[256];
+  int prefix_len;
+
+  /* Response is required before writes */
+  if (!req->has_response)
+    return UV_EPROTO;
+
+  if (!req->chunked) {
+    *pbufs = (uv_buf_t*) bufs;
+    *npbufs = nbufs;
+    return 0;
+  }
+
+  *npbufs = nbufs + 1;
+  if (nstorage >= *npbufs)
+    *pbufs = storage;
+  else
+    *pbufs = malloc(*npbufs * sizeof(**pbufs));
+  if (*pbufs == NULL)
+    return UV_ENOMEM;
+
+  total = 0;
+  for (i = 0; i < nbufs; i++)
+    total += bufs[i].len;
+
+  prefix_len = snprintf(prefix, sizeof(prefix), "%llx\r\n",
+                        (unsigned long long) total);
+  *pbufs[0] = uv_buf_init(prefix, prefix_len);
+  memcpy((*pbufs) + 1, bufs, nbufs * sizeof(*bufs));
+
+  return 0;
 }

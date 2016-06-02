@@ -5,6 +5,7 @@
     V(req_no_headers)                                                         \
     V(req_with_headers)                                                       \
     V(req_respond)                                                            \
+    V(req_write)                                                              \
 
 #define TEST_DECL(N) void test__##N();
 

@@ -26,23 +26,39 @@ static int uv_http_req_link_write(uv_link_t* link,
                                   uv_stream_t* send_handle,
                                   uv_link_write_cb cb,
                                   void* arg) {
-  /* TODO(indutny): implement writes */
-  return UV_ENOSYS;
+  uv_http_req_t* req;
+  uv_buf_t buf_storage[1024];
+  uv_buf_t* pbufs;
+  int err;
+
+  req = (uv_http_req_t*) link;
+
+  /* No IPC on HTTP requests */
+  if (send_handle != NULL)
+    return UV_ENOSYS;
+
+  /* Write works only for an active request */
+  if (req->http->active_req != req)
+    return UV_EAGAIN;
+
+  err = uv_http_req_prepare_write(req, buf_storage, ARRAY_SIZE(buf_storage),
+                                  bufs, nbufs, &pbufs, &nbufs);
+  if (err != 0)
+    return err;
+
+  err = uv_link_propagate_write(req->http->parent, source, pbufs, nbufs, NULL,
+                                cb, arg);
+  if (pbufs != buf_storage && pbufs != bufs)
+    free(pbufs);
+
+  return err;
 }
 
 
 static int uv_http_req_link_try_write(uv_link_t* link,
                                       const uv_buf_t bufs[],
                                       unsigned int nbufs) {
-  uv_http_req_t* req;
-
-  req = (uv_http_req_t*) link;
-
-  /* Try write works only for an active request */
-  if (req->http->active_req != req)
-    return 0;
-
-  /* TODO(indutny): implement writes */
+  /* Try write is not supported because of chunked encoding */
   return UV_ENOSYS;
 }
 

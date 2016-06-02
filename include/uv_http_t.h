@@ -86,6 +86,7 @@ struct uv_http_req_s {
   unsigned int state: 2;
   unsigned int reading: 1;
   unsigned int pending_eof: 1;
+  unsigned int has_response: 1;
   uv_http_req_t* next;
 };
 
