@@ -55,6 +55,8 @@ struct uv_http_req_s {
   UV_LINK_FIELDS
 
   /* Public fields */
+  uv_http_t* http;
+
   unsigned short http_major;
   unsigned short http_minor;
   uv_http_method_t method;

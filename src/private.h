@@ -18,6 +18,10 @@ struct uv_http_s {
     uv_http_method_t method;
   } tmp_req;
   uv_http_req_t* current_req;
+  unsigned int active_reqs;
+
+  uv_link_close_cb close_cb;
+  uv_link_t* close_source;
 
   unsigned int reading:2;
 
@@ -46,6 +50,7 @@ void uv_http_destroy(uv_http_t* http, uv_link_t* source, uv_link_close_cb cb);
 
 int uv_http_consume(uv_http_t* http, const char* data, size_t size);
 void uv_http_error(uv_http_t* http, int err);
+void uv_http_on_req_close(uv_http_t* http, uv_http_req_t* req);
 
 void uv_http_req_error(uv_http_t* http, uv_http_req_t* req, int err);
 void uv_http_req_eof(uv_http_t* http, uv_http_req_t* req);

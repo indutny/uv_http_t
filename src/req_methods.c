@@ -51,9 +51,10 @@ static void uv_http_req_link_close(uv_link_t* link, uv_link_t* source,
                                    uv_link_close_cb cb) {
   uv_http_req_t* req;
 
-  /* TODO(indutny): flush out pending data */
   req = (uv_http_req_t*) link;
   req->reading = 0;
+
+  uv_http_on_req_close(req->http, req);
 
   cb(source);
 }

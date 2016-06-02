@@ -16,9 +16,13 @@ static int uv_http_on_header_value(http_parser* parser, const char* value,
                                    size_t length);
 static int uv_http_on_body(http_parser* parser, const char* value,
                            size_t length);
+
 static uv_http_method_t uv_http_convert_method(enum http_method method);
+
 static int uv_http_process_pending(uv_http_t* http, uv_http_side_t side);
 static int uv_http_request_maybe(uv_http_t* http);
+static void uv_http_maybe_close(uv_http_t* http);
+static void uv_http_free(uv_http_t* http);
 
 uv_http_t* uv_http_create(uv_http_req_handler_cb cb, int* err) {
   uv_http_t* res;
@@ -64,8 +68,44 @@ fail_link_init:
 }
 
 
+void uv_http_free(uv_http_t* http) {
+  uv_http_data_free(&http->pending_data);
+  uv_http_data_free(&http->pending_req_data);
+  uv_http_data_free(&http->pending_url);
+  free(http);
+}
+
+
 void uv_http_destroy(uv_http_t* http, uv_link_t* source, uv_link_close_cb cb) {
-  /* TODO(indutny): implement me */
+  /* Wait for all active reqs to go down */
+  if (http->active_reqs > 0) {
+    CHECK_EQ(http->close_cb, NULL, "double close attempt");
+
+    http->close_cb = cb;
+    http->close_source = source;
+    return;
+  }
+
+  cb(source);
+  uv_http_free(http);
+}
+
+
+void uv_http_maybe_close(uv_http_t* http) {
+  uv_link_close_cb cb;
+  uv_link_t* source;
+
+  if (http->close_cb == NULL)
+    return;
+
+  if (http->active_reqs > 0)
+    return;
+
+  cb = http->close_cb;
+  source = http->close_source;
+  http->close_cb = NULL;
+  http->close_source = NULL;
+
   cb(source);
 }
 
@@ -124,6 +164,14 @@ int uv_http_process_pending(uv_http_t* http, uv_http_side_t side) {
 }
 
 
+void uv_http_on_req_close(uv_http_t* http, uv_http_req_t* req) {
+  http->active_reqs--;
+  if (http->current_req == req)
+    http->current_req = NULL;
+  uv_http_maybe_close(http);
+}
+
+
 void uv_http_error(uv_http_t* http, int err) {
   /* TODO(indutny): implement me */
 }
@@ -140,7 +188,9 @@ int uv_http_accept(uv_http_t* http, uv_http_req_t* req) {
   req->http_minor = http->tmp_req.http_minor;
   req->method = http->tmp_req.method;
 
-  http->current_req =req;
+  req->http = http;
+  http->current_req = req;
+  http->active_reqs++;
   return 0;
 }
 

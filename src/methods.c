@@ -40,8 +40,7 @@ static int uv_http_link_shutdown(uv_link_t* link,
                                  uv_link_t* source,
                                  uv_link_shutdown_cb cb,
                                  void* arg) {
-  /* TODO(indutny): implement me */
-  return UV_EPROTO;
+  return uv_link_propagate_shutdown(link->parent, source, cb, arg);
 }
 
 
