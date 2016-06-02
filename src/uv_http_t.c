@@ -2,6 +2,7 @@
 #include <string.h>
 
 #include "src/common.h"
+#include "src/utils.h"
 
 
 static int uv_http_on_message_begin(http_parser* parser);
@@ -17,6 +18,7 @@ static int uv_http_on_body(http_parser* parser, const char* value,
                            size_t length);
 static uv_http_method_t uv_http_convert_method(enum http_method method);
 static int uv_http_process_pending(uv_http_t* http, uv_http_side_t side);
+static int uv_http_request_maybe(uv_http_t* http);
 
 uv_http_t* uv_http_create(uv_http_req_handler_cb cb, int* err) {
   uv_http_t* res;
@@ -49,6 +51,10 @@ uv_http_t* uv_http_create(uv_http_req_handler_cb cb, int* err) {
 
   /* read_start() should not be blocked by this */
   res->reading |= (unsigned int) kUVHTTPSideRequest;
+
+  uv_http_data_init(&res->pending_data);
+  uv_http_data_init(&res->pending_req_data);
+  uv_http_data_init(&res->pending_url);
 
   return res;
 
@@ -84,45 +90,30 @@ int uv_http_consume(uv_http_t* http, const char* data, size_t size) {
     return 0;
 
   /* Store pending data for later use */
-  return uv_http_queue_pending(&http->pending_data, data + parsed,
-                               size - parsed);
-}
-
-
-int uv_http_queue_pending(uv_http_pending_t* buf, const char* data,
-                          size_t size) {
-  buf->size = size;
-  buf->bytes = malloc(size);
-  if (buf->bytes == NULL)
-    return UV_ENOMEM;
-
-  memcpy(buf->bytes, data, size);
-  return 0;
+  return uv_http_data_queue(&http->pending_data, data + parsed, size - parsed);
 }
 
 
 int uv_http_process_pending(uv_http_t* http, uv_http_side_t side) {
-  uv_http_pending_t* buf;
+  uv_http_data_t* data;
   char* bytes;
   size_t size;
   int err;
 
-  buf = side == kUVHTTPSideConnection ? &http->pending_data :
-                                        &http->pending_req_data;
-
-  bytes = buf->bytes;
-  if (bytes == NULL)
+  data = side == kUVHTTPSideConnection ? &http->pending_data :
+                                         &http->pending_req_data;
+  if (data->size == 0)
     return 0;
 
-  size = buf->size;
-
-  buf->bytes = NULL;
-  buf->size = 0;
+  bytes = data->value;
+  size = data->size;
 
   if (side == kUVHTTPSideConnection)
     err = uv_http_consume(http, bytes, size);
   else
-    err = uv_http_req_consume(http, http->last_req, bytes, size);
+    err = uv_http_req_consume(http, http->current_req, bytes, size);
+
+  uv_http_data_dequeue(data, size);
 
   if (err != 0)
     return err;
@@ -149,7 +140,7 @@ int uv_http_accept(uv_http_t* http, uv_http_req_t* req) {
   req->http_minor = http->tmp_req.http_minor;
   req->method = http->tmp_req.method;
 
-  http->last_req =req;
+  http->current_req =req;
   return 0;
 }
 
@@ -195,6 +186,25 @@ int uv_http_read_stop(uv_http_t* http, uv_http_side_t side) {
   return uv_link_read_stop(http->parent);
 }
 
+
+int uv_http_request_maybe(uv_http_t* http) {
+  if (http->current_req != NULL)
+    return 0;
+
+  http->request_handler(http, http->pending_url.value, http->pending_url.size);
+  uv_http_data_dequeue(&http->pending_url, http->pending_url.size);
+
+  /* TODO(indutny): is there any reason to loosen this? */
+  CHECK_NE(http->current_req, NULL, "request_handler must accept request");
+
+  /* Requests starts in not-reading mode */
+  if (!http->current_req->reading)
+    return uv_http_read_stop(http, kUVHTTPSideRequest);
+
+  return 0;
+}
+
+
 /* Parser callbacks */
 
 
@@ -207,7 +217,7 @@ int uv_http_on_message_begin(http_parser* parser) {
   http->tmp_req.http_minor = parser->http_minor;
   http->tmp_req.method = uv_http_convert_method(parser->method);
 
-  http->last_req = NULL;
+  http->current_req = NULL;
 
   return 0;
 }
@@ -216,15 +226,13 @@ int uv_http_on_message_begin(http_parser* parser) {
 int uv_http_on_url(http_parser* parser, const char* value,
                    size_t length) {
   uv_http_t* http;
+  int err;
+
   http = container_of(parser, uv_http_t, parser);
 
-  http->request_handler(http, value, length);
-  /* TODO(indutny): is there any reason to loosen this? */
-  CHECK_NE(http->last_req, NULL, "request_handler must accept request");
-
-  /* Requests starts in not-reading mode */
-  if (!http->last_req->reading &&
-      uv_http_read_stop(http, kUVHTTPSideRequest) != 0) {
+  err = uv_http_data_queue(&http->pending_data, value, length);
+  if (err != 0) {
+    uv_http_error(http, err);
     return -1;
   }
 
@@ -234,13 +242,21 @@ int uv_http_on_url(http_parser* parser, const char* value,
 
 int uv_http_on_headers_complete(http_parser* parser) {
   uv_http_t* http;
+  int err;
+
   http = container_of(parser, uv_http_t, parser);
 
+  err = uv_http_request_maybe(http);
+  if (err != 0) {
+    uv_http_error(http, err);
+    return -1;
+  }
+
   /* Faciliate light servers */
-  if (http->last_req->on_headers_complete == NULL)
+  if (http->current_req->on_headers_complete == NULL)
     return 0;
 
-  return http->last_req->on_headers_complete(http->last_req);
+  return http->current_req->on_headers_complete(http->current_req);
 }
 
 
@@ -249,12 +265,12 @@ int uv_http_on_message_complete(http_parser* parser) {
   uv_http_req_t* req;
 
   http = container_of(parser, uv_http_t, parser);
-  req = http->last_req;
+  req = http->current_req;
 
   uv_http_req_eof(http, req);
 
   /* Change of requests */
-  http->last_req = NULL;
+  http->current_req = NULL;
   http->reading |= (unsigned int) kUVHTTPSideRequest;
 
   return 0;
@@ -264,13 +280,21 @@ int uv_http_on_message_complete(http_parser* parser) {
 int uv_http_on_header_field(http_parser* parser, const char* value,
                             size_t length) {
   uv_http_t* http;
+  int err;
+
   http = container_of(parser, uv_http_t, parser);
 
+  err = uv_http_request_maybe(http);
+  if (err != 0) {
+    uv_http_error(http, err);
+    return -1;
+  }
+
   /* Faciliate light servers */
-  if (http->last_req->on_header_field == NULL)
+  if (http->current_req->on_header_field == NULL)
     return 0;
 
-  return http->last_req->on_header_field(http->last_req, value, length);
+  return http->current_req->on_header_field(http->current_req, value, length);
 }
 
 
@@ -280,10 +304,10 @@ int uv_http_on_header_value(http_parser* parser, const char* value,
   http = container_of(parser, uv_http_t, parser);
 
   /* Faciliate light servers */
-  if (http->last_req->on_header_value == NULL)
+  if (http->current_req->on_header_value == NULL)
     return 0;
 
-  return http->last_req->on_header_value(http->last_req, value, length);
+  return http->current_req->on_header_value(http->current_req, value, length);
 }
 
 
@@ -292,7 +316,7 @@ int uv_http_on_body(http_parser* parser, const char* value, size_t length) {
   uv_http_req_t* req;
 
   http = container_of(parser, uv_http_t, parser);
-  req = http->last_req;
+  req = http->current_req;
 
   uv_http_req_consume(http, req, value, length);
   if (!req->reading && uv_http_read_stop(http, kUVHTTPSideRequest) != 0)

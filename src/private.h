@@ -4,14 +4,8 @@
 #include "http_parser.h"
 #include "uv_link_t.h"
 
+#include "src/utils.h"
 #include "src/queue.h"
-
-typedef struct uv_http_pending_s uv_http_pending_t;
-
-struct uv_http_pending_s {
-  char* bytes;
-  size_t size;
-};
 
 struct uv_http_s {
   UV_LINK_FIELDS
@@ -23,15 +17,16 @@ struct uv_http_s {
     unsigned short http_minor;
     uv_http_method_t method;
   } tmp_req;
-  uv_http_req_t* last_req;
+  uv_http_req_t* current_req;
 
   unsigned int reading:2;
 
   http_parser parser;
   http_parser_settings parser_settings;
 
-  uv_http_pending_t pending_data;
-  uv_http_pending_t pending_req_data;
+  uv_http_data_t pending_data;
+  uv_http_data_t pending_req_data;
+  uv_http_data_t pending_url;
 };
 
 /* NOTE: used as flags too */
@@ -49,8 +44,6 @@ uv_link_methods_t uv_http_req_methods;
 
 void uv_http_destroy(uv_http_t* http, uv_link_t* source, uv_link_close_cb cb);
 
-int uv_http_queue_pending(uv_http_pending_t* buf, const char* data,
-                          size_t size);
 int uv_http_consume(uv_http_t* http, const char* data, size_t size);
 void uv_http_error(uv_http_t* http, int err);
 

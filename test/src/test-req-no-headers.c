@@ -6,7 +6,10 @@ static uv_http_req_t req;
 static uv_link_observer_t req_observer;
 
 static void req_no_headers_client(int fd) {
-  client_send_str("POST /some/path HTTP/1.1\r\nContent-Length: 1\r\n\r\na");
+  client_send_str("POST /so");
+  /* Let it through */
+  usleep(100000);
+  client_send_str("me/path HTTP/1.1\r\nContent-Length: 1\r\n\r\na");
 }
 
 

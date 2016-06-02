@@ -25,6 +25,7 @@
       "src/uv_http_req_t.c",
       "src/methods.c",
       "src/req_methods.c",
+      "src/utils.c",
     ],
   }],
 }

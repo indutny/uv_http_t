@@ -1,4 +1,5 @@
 #include "src/common.h"
+#include "src/utils.h"
 
 void uv_http_req_eof(uv_http_t* http, uv_http_req_t* req) {
   if (req->reading)
@@ -38,7 +39,7 @@ int uv_http_req_consume(uv_http_t* http, uv_http_req_t* req,
     return 0;
 
   /* Pending data */
-  err = uv_http_queue_pending(&http->pending_req_data, data, size);
+  err = uv_http_data_queue(&http->pending_req_data, data, size);
   if (err != 0) {
     uv_http_req_error(http, req, err);
     return 0;
