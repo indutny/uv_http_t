@@ -172,8 +172,14 @@ void uv_http_on_req_close(uv_http_t* http, uv_http_req_t* req) {
 
   if (http->active_req == req) {
     http->active_req = http->active_req->next;
-    if (http->active_req != NULL && http->active_req->on_active != NULL)
-      http->active_req->on_active(http->active_req, 0);
+    if (http->active_req != NULL && http->active_req->on_active != NULL) {
+      uv_http_req_active_cb cb;
+
+      cb = http->active_req->on_active;
+      http->active_req->on_active = NULL;
+
+      cb(http->active_req, 0);
+    }
   }
   uv_http_maybe_close(http);
 }
