@@ -72,8 +72,12 @@ void uv_http_req_on_active(uv_http_req_t* req, uv_http_req_active_cb cb) {
 
 
 void uv_http_req_write_cb(uv_link_t* link, int status, void* arg) {
-  /* TODO(indutny): handle error */
-  CHECK_EQ(status, 0, "TODO(indutny): implement error handling");
+  uv_http_req_t* req;
+
+  req = (uv_http_req_t*) link;
+
+  if (status != 0)
+    uv_http_req_error(req->http, req, status);
 }
 
 
