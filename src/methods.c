@@ -53,6 +53,7 @@ static void uv_http_link_close(uv_link_t* link, uv_link_t* source,
 }
 
 
+/* TODO(indutny): multi-threading? */
 static char shared_storage[16 * 1024];
 static int shared_storage_busy;
 

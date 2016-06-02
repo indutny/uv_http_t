@@ -69,6 +69,19 @@ static void client_send_str(const char* data) {
 }
 
 
+static int client_receive(char* data, size_t size) {
+  int err;
+
+  do
+    err = read(fds[0], data, size);
+  while (err == -1 && errno == EINTR);
+
+  CHECK_NE(err, -1, "client write failed");
+
+  return err;
+}
+
+
 static void close_cb(uv_link_t* link) {
   close_cb_called++;
 }

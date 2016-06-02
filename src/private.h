@@ -20,11 +20,6 @@ struct uv_http_s {
 
   uv_http_req_handler_cb request_handler;
 
-  struct {
-    unsigned short http_major;
-    unsigned short http_minor;
-    uv_http_method_t method;
-  } tmp_req;
   uv_http_req_t* current_req;
   unsigned int active_reqs;
 

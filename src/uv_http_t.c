@@ -185,9 +185,10 @@ int uv_http_accept(uv_http_t* http, uv_http_req_t* req) {
   if (err != 0)
     return err;
 
-  req->http_major = http->tmp_req.http_major;
-  req->http_minor = http->tmp_req.http_minor;
-  req->method = http->tmp_req.method;
+  req->http_major = http->parser.http_major;
+  req->http_minor = http->parser.http_minor;
+  req->method = uv_http_convert_method(http->parser.method);
+
 
   req->http = http;
   http->current_req = req;
@@ -329,10 +330,6 @@ int uv_http_on_message_begin(http_parser* parser) {
   uv_http_t* http;
 
   http = container_of(parser, uv_http_t, parser);
-
-  http->tmp_req.http_major = parser->http_major;
-  http->tmp_req.http_minor = parser->http_minor;
-  http->tmp_req.method = uv_http_convert_method(parser->method);
 
   http->current_req = NULL;
   http->pending.header_state = kUVHTTPHeaderStateURL;

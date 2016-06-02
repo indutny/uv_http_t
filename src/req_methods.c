@@ -3,6 +3,7 @@
 static int uv_http_req_link_read_start(uv_link_t* link) {
   uv_http_req_t* req;
 
+  /* TODO(indutny): check pending eof */
   req = (uv_http_req_t*) link;
   req->reading = 1;
   return 0;

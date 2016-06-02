@@ -73,4 +73,12 @@ struct uv_http_req_s {
 UV_EXTERN uv_http_t* uv_http_create(uv_http_req_handler_cb cb, int* err);
 UV_EXTERN int uv_http_accept(uv_http_t* http, uv_http_req_t* req);
 
+/* Request */
+UV_EXTERN int uv_http_req_respond(uv_http_req_t* req,
+                                  unsigned short status,
+                                  const uv_buf_t* message,
+                                  const uv_buf_t header_fields[],
+                                  const uv_buf_t header_values[],
+                                  unsigned int header_count);
+
 #endif  /* INCLUDE_UV_LINK_H_ */

@@ -43,6 +43,9 @@ static void req_no_headers_server(uv_http_t* http,
                                   size_t url_len) {
   CHECK_EQ(strncmp("/some/path", url, url_len), 0, "URL should match");
   CHECK_EQ(uv_http_accept(http, &req), 0, "uv_http_accept()");
+  CHECK_EQ(req.http_major, 1, "http_major");
+  CHECK_EQ(req.http_minor, 1, "http_minor");
+  CHECK_EQ(req.method, UV_HTTP_POST, "method");
 
   CHECK_EQ(uv_link_observer_init(&req_observer), 0,
            "uv_link_observer_init(req_observer)");

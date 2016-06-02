@@ -4,6 +4,7 @@
 #define TEST_ENUM(V)                                                          \
     V(req_no_headers)                                                         \
     V(req_with_headers)                                                       \
+    V(req_respond)                                                            \
 
 #define TEST_DECL(N) void test__##N();
 
