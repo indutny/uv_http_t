@@ -19,7 +19,6 @@ static int uv_http_on_body(http_parser* parser, const char* value,
 
 static int uv_http_process_pending(uv_http_t* http, uv_http_side_t side);
 static int uv_http_emit_req(uv_http_t* http);
-static void uv_http_maybe_close(uv_http_t* http);
 static void uv_http_free(uv_http_t* http);
 static int uv_http_on_field(uv_http_t* http, uv_http_header_state_t next,
                             const char* value, size_t size);
@@ -92,6 +91,13 @@ void uv_http_destroy(uv_http_t* http, uv_link_t* source, uv_link_close_cb cb) {
 }
 
 
+void uv_http_close_req(uv_http_t* http, uv_http_req_t* req) {
+  http->active_reqs--;
+  if (http->last_req == req)
+    http->last_req = NULL;
+}
+
+
 void uv_http_maybe_close(uv_http_t* http) {
   uv_link_close_cb cb;
   uv_link_t* source;
@@ -151,8 +157,10 @@ int uv_http_process_pending(uv_http_t* http, uv_http_side_t side) {
 
   if (side == kUVHTTPSideConnection)
     err = uv_http_consume(http, bytes, size);
-  else
+  else if (http->last_req != NULL)
     err = uv_http_req_consume(http, http->last_req, bytes, size);
+  else
+    err = 0;
 
   uv_http_data_dequeue(data, size);
 
@@ -165,23 +173,20 @@ int uv_http_process_pending(uv_http_t* http, uv_http_side_t side) {
 }
 
 
-void uv_http_on_req_close(uv_http_t* http, uv_http_req_t* req) {
-  http->active_reqs--;
-  if (http->last_req == req)
-    http->last_req = NULL;
+void uv_http_on_req_finish(uv_http_t* http, uv_http_req_t* req) {
+  uv_http_req_active_cb cb;
 
-  if (http->active_req == req) {
-    http->active_req = http->active_req->next;
-    if (http->active_req != NULL && http->active_req->on_active != NULL) {
-      uv_http_req_active_cb cb;
+  if (http->active_req != req)
+    return;
 
-      cb = http->active_req->on_active;
-      http->active_req->on_active = NULL;
+  http->active_req = http->active_req->next;
+  if (http->active_req == NULL || http->active_req->on_active == NULL)
+    return;
 
-      cb(http->active_req, 0);
-    }
-  }
-  uv_http_maybe_close(http);
+  cb = http->active_req->on_active;
+  http->active_req->on_active = NULL;
+
+  cb(http->active_req, 0);
 }
 
 
@@ -192,6 +197,9 @@ void uv_http_error(uv_http_t* http, int err) {
 
 int uv_http_accept(uv_http_t* http, uv_http_req_t* req) {
   int err;
+
+  if (!http->pending_accept)
+    return UV_EAGAIN;
 
   err = uv_link_init((uv_link_t*) req, &uv_http_req_methods);
   if (err != 0)
@@ -225,7 +233,10 @@ int uv_http_accept(uv_http_t* http, uv_http_req_t* req) {
   http->last_req = req;
 
   http->active_reqs++;
-  return 0;
+  http->pending_accept = 0;
+
+  /* Requests start stopped */
+  return uv_link_read_stop((uv_link_t*) req);
 }
 
 
@@ -276,16 +287,13 @@ int uv_http_emit_req(uv_http_t* http) {
   uv_http_req_t* prev;
 
   prev = http->last_req;
+  http->pending_accept = 1;
 
   url = &http->pending.url_or_header;
   http->request_handler(http, url->value, url->size);
 
   /* TODO(indutny): is there any reason to loosen this? */
-  CHECK_NE(http->last_req, prev, "request_handler must accept request");
-
-  /* Requests starts in not-reading mode */
-  if (!http->active_req->reading)
-    return uv_http_read_stop(http, kUVHTTPSideRequest);
+  CHECK_EQ(http->pending_accept, 0, "request_handler must accept request");
 
   return 0;
 }
@@ -312,11 +320,11 @@ int uv_http_on_field(uv_http_t* http, uv_http_header_state_t next,
         req = http->last_req;
         break;
       case kUVHTTPHeaderStateField:
-        if (req->on_header_field != NULL)
+        if (req != NULL && req->on_header_field != NULL)
           err = req->on_header_field(req, data->value, data->size);
         break;
       case kUVHTTPHeaderStateValue:
-        if (req->on_header_value != NULL)
+        if (req != NULL && req->on_header_value != NULL)
           err = req->on_header_value(req, data->value, data->size);
         break;
       default:
@@ -330,6 +338,8 @@ int uv_http_on_field(uv_http_t* http, uv_http_header_state_t next,
 
     uv_http_data_dequeue(data, data->size);
     http->pending.header_state = next;
+    if (req == NULL)
+      return 0;
   }
 
   /* Faciliate light requests */
@@ -437,11 +447,10 @@ int uv_http_on_body(http_parser* parser, const char* value, size_t length) {
 
   http = container_of(parser, uv_http_t, parser);
   req = http->last_req;
+  if (req == NULL)
+    return 0;
 
   uv_http_req_consume(http, req, value, length);
-  if (!req->reading && uv_http_read_stop(http, kUVHTTPSideRequest) != 0)
-    return -1;
-
   return 0;
 }
 
@@ -449,15 +458,22 @@ int uv_http_on_body(http_parser* parser, const char* value, size_t length) {
 int uv_http_on_message_complete(http_parser* parser) {
   uv_http_t* http;
   uv_http_req_t* req;
+  int err;
 
   http = container_of(parser, uv_http_t, parser);
   req = http->last_req;
+  if (req == NULL)
+    return 0;
+
   req->state |= kUVHTTPReqStateEnd;
 
   uv_http_req_eof(http, req);
 
   /* Change of requests */
-  http->reading |= (unsigned int) kUVHTTPSideRequest;
+  err = uv_http_read_start(http, kUVHTTPSideRequest);
+  if (err == 0)
+    return 0;
 
-  return 0;
+  uv_http_error(http, err);
+  return -1;
 }

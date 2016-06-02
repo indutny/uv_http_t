@@ -3,10 +3,16 @@
 static int uv_http_req_link_read_start(uv_link_t* link) {
   uv_http_req_t* req;
 
-  /* TODO(indutny): check pending eof */
   req = (uv_http_req_t*) link;
+  if (req->reading)
+    return 0;
+
+  /* TODO(indutny): check pending eof */
   req->reading = 1;
-  return 0;
+  if (req->http->last_req == req)
+    return uv_http_read_start(req->http, kUVHTTPSideRequest);
+  else
+    return 0;
 }
 
 
@@ -14,8 +20,14 @@ static int uv_http_req_link_read_stop(uv_link_t* link) {
   uv_http_req_t* req;
 
   req = (uv_http_req_t*) link;
+  if (!req->reading)
+    return 0;
+
   req->reading = 0;
-  return 0;
+  if (req->http->last_req == req)
+    return uv_http_read_stop(req->http, kUVHTTPSideRequest);
+  else
+    return 0;
 }
 
 
@@ -69,18 +81,27 @@ static int uv_http_req_link_shutdown(uv_link_t* link,
                                      void* arg) {
   uv_http_req_t* req;
   uv_buf_t buf;
+  int err;
 
   req = (uv_http_req_t*) link;
+
+  /* Shutdown works only for an active request */
+  if (req->http->active_req != req)
+    return UV_EAGAIN;
 
   /* TODO(indutny): invoke callback for non-chunked */
   if (!req->chunked || !req->has_response || req->shutdown)
     return UV_EPROTO;
 
-  req->shutdown = 1;
-
   buf = uv_buf_init("0\r\n", 3);
-  return uv_link_propagate_write(req->http->parent, source, &buf, 1, NULL, cb,
-                                 arg);
+  err = uv_link_propagate_write(req->http->parent, source, &buf, 1, NULL, cb,
+                                arg);
+  if (err != 0)
+    return err;
+
+  req->shutdown = 1;
+  uv_http_on_req_finish(req->http, req);
+  return 0;
 }
 
 
@@ -91,7 +112,14 @@ static void uv_http_req_link_close(uv_link_t* link, uv_link_t* source,
   req = (uv_http_req_t*) link;
   req->reading = 0;
 
-  uv_http_on_req_close(req->http, req);
+  /* Request wasn't shutdown */
+  if (!req->shutdown) {
+    uv_http_error(req->http, UV_EPROTO);
+    uv_http_on_req_finish(req->http, req);
+  }
+
+  uv_http_close_req(req->http, req);
+  uv_http_maybe_close(req->http);
 
   cb(source);
 }

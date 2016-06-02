@@ -20,6 +20,7 @@ struct uv_http_s {
 
   uv_http_req_handler_cb request_handler;
 
+  unsigned int pending_accept: 1;
   uv_http_req_t* active_req;
   uv_http_req_t* last_req;
   unsigned int active_reqs;
@@ -62,12 +63,15 @@ void uv_http_destroy(uv_http_t* http, uv_link_t* source, uv_link_close_cb cb);
 
 int uv_http_consume(uv_http_t* http, const char* data, size_t size);
 void uv_http_error(uv_http_t* http, int err);
-void uv_http_on_req_close(uv_http_t* http, uv_http_req_t* req);
+void uv_http_on_req_finish(uv_http_t* http, uv_http_req_t* req);
 
 int uv_http_read_start(uv_http_t* http, uv_http_side_t side);
 int uv_http_read_stop(uv_http_t* http, uv_http_side_t side);
 
+void uv_http_maybe_close(uv_http_t* http);
+
 /* Request related */
+void uv_http_close_req(uv_http_t* http, uv_http_req_t* req);
 void uv_http_req_error(uv_http_t* http, uv_http_req_t* req, int err);
 void uv_http_req_eof(uv_http_t* http, uv_http_req_t* req);
 int uv_http_req_consume(uv_http_t* http, uv_http_req_t* req,
