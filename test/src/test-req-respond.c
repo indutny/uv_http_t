@@ -27,27 +27,34 @@ static int req_on_complete(uv_http_req_t* req) {
 }
 
 
-static void req_respond_server(uv_http_t* http,
-                               const char* url,
-                               size_t url_len) {
+static void req_on_active(uv_http_req_t* req, int status) {
   uv_buf_t fields[2];
   uv_buf_t values[2];
-  uv_buf_t status;
+  uv_buf_t msg;
 
-  CHECK_EQ(uv_http_accept(http, &req), 0, "uv_http_accept()");
+  CHECK_EQ(status, 0, "status should be zero");
 
   fields[0] = uv_buf_init("ABC", 3);
   values[0] = uv_buf_init("DEF", 3);
   fields[1] = uv_buf_init("X-Something", 11);
   values[1] = uv_buf_init("some-value", 10);
 
-  status = uv_buf_init("OK", 2);
-  CHECK_EQ(uv_http_req_respond(&req, 200, &status, fields, values, 2),
+  msg = uv_buf_init("OK", 2);
+  CHECK_EQ(uv_http_req_respond(req, 200, &msg, fields, values, 2),
            0,
            "uv_http_req_respond");
 
   CHECK_EQ(uv_link_read_stop((uv_link_t*) server.http), 0,
            "uv_read_stop(server)");
+}
+
+
+static void req_respond_server(uv_http_t* http,
+                               const char* url,
+                               size_t url_len) {
+  CHECK_EQ(uv_http_accept(http, &req), 0, "uv_http_accept()");
+
+  uv_http_req_on_active(&req, req_on_active);
 
   req.on_headers_complete = req_on_complete;
 }

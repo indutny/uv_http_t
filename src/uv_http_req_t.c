@@ -56,6 +56,14 @@ void uv_http_req_error(uv_http_t* http, uv_http_req_t* req, int err) {
 }
 
 
+void uv_http_req_on_active(uv_http_req_t* req, uv_http_req_active_cb cb) {
+  if (req->http->active_req == req)
+    return cb(req, 0);
+
+  req->on_active = cb;
+}
+
+
 void uv_http_req_write_cb(uv_link_t* link, int status, void* arg) {
   /* TODO(indutny): handle error */
 }
@@ -78,6 +86,9 @@ int uv_http_req_respond(uv_http_req_t* req,
   size_t total;
 
   http = req->http;
+
+  if (req->http->active_req != req)
+    return UV_EAGAIN;
 
   /* TODO(indutny): default message */
   nbufs = header_count * 4 + 3;
@@ -106,9 +117,6 @@ int uv_http_req_respond(uv_http_req_t* req,
   total = 0;
   for (i = 0; i < nbufs; i++)
     total += bufs[i].len;
-
-  /* XXX(indutny): should check that the req is active */
-  CHECK_EQ(req->http->active_req, req, "No queueing yet");
 
   err = uv_link_try_write(http->parent, bufs, nbufs);
   if (err < 0)

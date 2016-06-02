@@ -13,6 +13,7 @@ typedef void (*uv_http_req_handler_cb)(uv_http_t* http, const char* url,
 typedef int (*uv_http_req_cb)(uv_http_req_t* req);
 typedef int (*uv_http_req_value_cb)(uv_http_req_t* req, const char* value,
                                     size_t length);
+typedef void (*uv_http_req_active_cb)(uv_http_req_t* req, int status);
 
 enum uv_http_method_e {
   UV_HTTP_DELETE,
@@ -72,6 +73,12 @@ struct uv_http_req_s {
   uv_http_req_value_cb on_header_value;
   uv_http_req_cb on_headers_complete;
 
+  /* Invoked when the request becomes available for sending response and
+   * doing writes
+   * (Semi-private, use `uv_http_req_on_active()`)
+   */
+  uv_http_req_active_cb on_active;
+
   /* Private fields */
   uv_http_req_state_t state;
   unsigned int reading: 1;
@@ -83,6 +90,11 @@ UV_EXTERN uv_http_t* uv_http_create(uv_http_req_handler_cb cb, int* err);
 UV_EXTERN int uv_http_accept(uv_http_t* http, uv_http_req_t* req);
 
 /* Request */
+
+/* NOTE: `cb` may be executed synchronously */
+UV_EXTERN void uv_http_req_on_active(uv_http_req_t* req,
+                                     uv_http_req_active_cb cb);
+
 UV_EXTERN int uv_http_req_respond(uv_http_req_t* req,
                                   unsigned short status,
                                   const uv_buf_t* message,

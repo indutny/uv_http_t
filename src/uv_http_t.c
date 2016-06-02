@@ -167,11 +167,14 @@ int uv_http_process_pending(uv_http_t* http, uv_http_side_t side) {
 
 void uv_http_on_req_close(uv_http_t* http, uv_http_req_t* req) {
   http->active_reqs--;
-  if (http->active_req == req)
-    http->active_req = http->active_req->next;
-
   if (http->last_req == req)
     http->last_req = NULL;
+
+  if (http->active_req == req) {
+    http->active_req = http->active_req->next;
+    if (http->active_req != NULL && http->active_req->on_active != NULL)
+      http->active_req->on_active(http->active_req, 0);
+  }
   uv_http_maybe_close(http);
 }
 
@@ -192,6 +195,12 @@ int uv_http_accept(uv_http_t* http, uv_http_req_t* req) {
   req->http_minor = http->parser.http_minor;
   req->method = uv_http_convert_method(http->parser.method);
   req->state = 0;
+
+  /* Zero callbacks */
+  req->on_header_field = NULL;
+  req->on_header_value = NULL;
+  req->on_headers_complete = NULL;
+  req->on_active = NULL;
 
   req->next = NULL;
 
