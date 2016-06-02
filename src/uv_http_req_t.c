@@ -196,6 +196,17 @@ int uv_http_req_prepare_write(uv_http_req_t* req,
   if (!req->has_response)
     return UV_EPROTO;
 
+  total = 0;
+  for (i = 0; i < nbufs; i++)
+    total += bufs[i].len;
+
+  /* Zero chunked writes are used for shutdown */
+  if (total == 0) {
+    *pbufs = storage;
+    *npbufs = 0;
+    return 0;
+  }
+
   if (!req->chunked) {
     *pbufs = (uv_buf_t*) bufs;
     *npbufs = nbufs;
@@ -209,10 +220,6 @@ int uv_http_req_prepare_write(uv_http_req_t* req,
     *pbufs = malloc(*npbufs * sizeof(**pbufs));
   if (*pbufs == NULL)
     return UV_ENOMEM;
-
-  total = 0;
-  for (i = 0; i < nbufs; i++)
-    total += bufs[i].len;
 
   prefix_len = snprintf(prefix, sizeof(prefix), "%llx\r\n",
                         (unsigned long long) total);

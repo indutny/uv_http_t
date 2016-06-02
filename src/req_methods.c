@@ -67,8 +67,20 @@ static int uv_http_req_link_shutdown(uv_link_t* link,
                                      uv_link_t* source,
                                      uv_link_shutdown_cb cb,
                                      void* arg) {
-  /* TODO(indutny): implement me */
-  return UV_EPROTO;
+  uv_http_req_t* req;
+  uv_buf_t buf;
+
+  req = (uv_http_req_t*) link;
+
+  /* TODO(indutny): invoke callback for non-chunked */
+  if (!req->chunked || !req->has_response || req->shutdown)
+    return UV_EPROTO;
+
+  req->shutdown = 1;
+
+  buf = uv_buf_init("0\r\n", 3);
+  return uv_link_propagate_write(req->http->parent, source, &buf, 1, NULL, cb,
+                                 arg);
 }
 
 

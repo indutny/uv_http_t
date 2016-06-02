@@ -205,6 +205,7 @@ int uv_http_accept(uv_http_t* http, uv_http_req_t* req) {
   req->reading = 0;
   req->pending_eof = 0;
   req->has_response = 0;
+  req->shutdown = 0;
 
   /* Zero callbacks */
   req->on_header_field = NULL;
