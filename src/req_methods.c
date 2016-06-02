@@ -33,6 +33,14 @@ static int uv_http_req_link_write(uv_link_t* link,
 static int uv_http_req_link_try_write(uv_link_t* link,
                                       const uv_buf_t bufs[],
                                       unsigned int nbufs) {
+  uv_http_req_t* req;
+
+  req = (uv_http_req_t*) link;
+
+  /* Try write works only for an active request */
+  if (req->http->current_req != req)
+    return 0;
+
   /* TODO(indutny): implement writes */
   return UV_ENOSYS;
 }
