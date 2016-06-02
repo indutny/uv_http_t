@@ -56,9 +56,10 @@ uv_http_t* uv_http_create(uv_http_req_handler_cb cb, int* err) {
   /* read_start() should not be blocked by this */
   res->reading |= (unsigned int) kUVHTTPSideRequest;
 
-  uv_http_data_init(&res->pending_data);
-  uv_http_data_init(&res->pending_req_data);
-  uv_http_data_init(&res->pending_url);
+  uv_http_data_init(&res->pending_data, NULL, 0);
+  uv_http_data_init(&res->pending_req_data, NULL, 0);
+  uv_http_data_init(&res->pending_url, res->url_storage,
+                    sizeof(res->url_storage));
 
   return res;
 

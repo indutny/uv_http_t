@@ -31,6 +31,10 @@ struct uv_http_s {
   uv_http_data_t pending_data;
   uv_http_data_t pending_req_data;
   uv_http_data_t pending_url;
+
+  /* TODO(indutny): consider increasing it, the idea is to handle the
+   * most common length */
+  char url_storage[512];
 };
 
 /* NOTE: used as flags too */

@@ -8,10 +8,13 @@ static int uv_http_data_grow(uv_http_data_t* data, size_t new_size);
 
 static const unsigned int kUVHTTPDataStorageChunk = 1024;
 
-void uv_http_data_init(uv_http_data_t* data) {
-  data->value = data->storage;
+void uv_http_data_init(uv_http_data_t* data, char* storage, size_t limit) {
+  data->value = storage;
   data->size = 0;
-  data->limit = sizeof(data->storage);
+  data->limit = limit;
+
+  data->storage = storage;
+  data->storage_limit = limit;
 }
 
 
@@ -42,7 +45,7 @@ void uv_http_data_dequeue(uv_http_data_t* data, size_t size) {
   /* The most usual case */
   if (data->size == size) {
     uv_http_data_free(data);
-    uv_http_data_init(data);
+    uv_http_data_init(data, data->storage, data->storage_limit);
     return;
   }
 
