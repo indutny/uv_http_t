@@ -114,6 +114,7 @@ void uv_http_maybe_close(uv_http_t* http) {
   http->close_source = NULL;
 
   cb(source);
+  uv_http_free(http);
 }
 
 
