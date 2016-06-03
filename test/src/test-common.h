@@ -69,16 +69,29 @@ static void client_send_str(const char* data) {
 }
 
 
-static int client_receive(char* data, size_t size) {
+static void client_expect_str(char* data) {
   int err;
+  int len;
 
-  do
-    err = read(fds[0], data, size);
-  while (err == -1 && errno == EINTR);
+  len = strlen(data);
+  while (len > 0) {
+    char tmp[1024];
+    int avail;
 
-  CHECK_NE(err, -1, "client write failed");
+    avail = sizeof(tmp);
+    if (len < avail)
+      avail = len;
 
-  return err;
+    do
+      err = read(fds[0], tmp, avail);
+    while (err == -1 && errno == EINTR);
+
+    CHECK_NE(err, -1, "client write failed");
+    CHECK_EQ(memcmp(tmp, data, err), 0, "data is not the same as expected");
+
+    len -= err;
+    data += err;
+  }
 }
 
 

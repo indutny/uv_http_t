@@ -7,20 +7,14 @@ static int shutdown_cb_called;
 static uv_http_req_t req;
 
 static void req_write_client(int fd) {
-  char buf[1024];
-  int len;
 
   client_send_str("GET /path HTTP/1.1\r\n\r\n");
-  len = client_receive(buf, sizeof(buf));
-
-  /* TODO(indutny): Could be partial read, do something about it */
-  CHECK_EQ(strncmp(buf, "HTTP/1.1 200 OK\r\n"
-                        "ABC: DEF\r\n"
-                        "X-Something: some-value\r\n"
-                        "Transfer-Encoding: chunked\r\n\r\n"
-                        "9\r\nsome body\r\n"
-                        "0\r\n\r\n", len),
-           0, "expected data");
+  client_expect_str("HTTP/1.1 200 OK\r\n"
+                    "ABC: DEF\r\n"
+                    "X-Something: some-value\r\n"
+                    "Transfer-Encoding: chunked\r\n\r\n"
+                    "9\r\nsome body\r\n"
+                    "0\r\n\r\n");
 }
 
 
