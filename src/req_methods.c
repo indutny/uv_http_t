@@ -50,6 +50,7 @@ static int uv_http_req_link_write(uv_link_t* link,
                                   void* arg) {
   uv_http_req_t* req;
   uv_buf_t buf_storage[1024];
+  char prefix[1024];
   uv_buf_t* pbufs;
   int err;
 
@@ -65,7 +66,8 @@ static int uv_http_req_link_write(uv_link_t* link,
   if (req->http->active_req != req)
     return UV_EAGAIN;
 
-  err = uv_http_req_prepare_write(req, buf_storage, ARRAY_SIZE(buf_storage),
+  err = uv_http_req_prepare_write(req, prefix, sizeof(prefix),
+                                  buf_storage, ARRAY_SIZE(buf_storage),
                                   bufs, nbufs, &pbufs, &nbufs);
   if (err != 0)
     return err;
@@ -112,7 +114,7 @@ static int uv_http_req_link_shutdown(uv_link_t* link,
   if (!req->chunked || !req->has_response || req->shutdown)
     return UV_EPROTO;
 
-  buf = uv_buf_init("0\r\n", 3);
+  buf = uv_buf_init("0\r\n\r\n", 5);
   err = uv_link_propagate_write(req->http->parent, source, &buf, 1, NULL, cb,
                                 arg);
   if (err != 0)

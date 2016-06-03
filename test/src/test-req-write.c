@@ -18,8 +18,8 @@ static void req_write_client(int fd) {
                         "ABC: DEF\r\n"
                         "X-Something: some-value\r\n"
                         "Transfer-Encoding: chunked\r\n\r\n"
-                        "9\r\nsome body"
-                        "0\r\n", len),
+                        "9\r\nsome body\r\n"
+                        "0\r\n\r\n", len),
            0, "expected data");
 }
 

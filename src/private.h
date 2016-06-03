@@ -79,6 +79,7 @@ void uv_http_req_eof(uv_http_t* http, uv_http_req_t* req);
 int uv_http_req_consume(uv_http_t* http, uv_http_req_t* req,
                         const char* data, size_t size);
 int uv_http_req_prepare_write(uv_http_req_t* req,
+                              char* prefix_storage, unsigned int prefix_size,
                               uv_buf_t* storage, unsigned int nstorage,
                               const uv_buf_t* bufs, unsigned int nbufs,
                               uv_buf_t** pbufs, unsigned int* npbufs);

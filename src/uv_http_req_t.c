@@ -173,13 +173,15 @@ done:
 
 
 int uv_http_req_prepare_write(uv_http_req_t* req,
+                              char* prefix_storage, unsigned int prefix_size,
                               uv_buf_t* storage, unsigned int nstorage,
                               const uv_buf_t* bufs, unsigned int nbufs,
                               uv_buf_t** pbufs, unsigned int* npbufs) {
   size_t total;
   unsigned int i;
-  char prefix[256];
   int prefix_len;
+  uv_buf_t* res;
+  unsigned int nres;
 
   /* Response is required before writes */
   if (!req->has_response)
@@ -202,18 +204,23 @@ int uv_http_req_prepare_write(uv_http_req_t* req,
     return 0;
   }
 
-  *npbufs = nbufs + 1;
-  if (nstorage >= *npbufs)
-    *pbufs = storage;
+  nres = nbufs + 2;
+  if (nstorage >= nres)
+    res = storage;
   else
-    *pbufs = malloc(*npbufs * sizeof(**pbufs));
-  if (*pbufs == NULL)
+    res = malloc(nres * sizeof(*res));
+  if (res == NULL)
     return UV_ENOMEM;
 
-  prefix_len = snprintf(prefix, sizeof(prefix), "%llx\r\n",
+  prefix_len = snprintf(prefix_storage, prefix_size, "%llx\r\n",
                         (unsigned long long) total);
-  *pbufs[0] = uv_buf_init(prefix, prefix_len);
-  memcpy((*pbufs) + 1, bufs, nbufs * sizeof(*bufs));
+  res[0] = uv_buf_init(prefix_storage, prefix_len);
+  for (i = 0; i < nbufs; i++)
+    res[i + 1] = bufs[i];
+  res[nres - 1] = uv_buf_init("\r\n", 2);
+
+  *pbufs = res;
+  *npbufs = nres;
 
   return 0;
 }

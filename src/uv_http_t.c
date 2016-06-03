@@ -21,7 +21,7 @@ static int uv_http_process_pending(uv_http_t* http, uv_http_side_t side);
 static int uv_http_emit_req(uv_http_t* http);
 static void uv_http_free(uv_http_t* http);
 static int uv_http_on_field(uv_http_t* http, uv_http_header_state_t next,
-                            const char* value, size_t size);
+                            const char* value, size_t size, int* res);
 
 uv_http_t* uv_http_create(uv_http_req_handler_cb cb, int* err) {
   uv_http_t* res;
@@ -318,7 +318,7 @@ int uv_http_emit_req(uv_http_t* http) {
 
 
 int uv_http_on_field(uv_http_t* http, uv_http_header_state_t next,
-                     const char* value, size_t size) {
+                     const char* value, size_t size, int* res) {
   uv_http_data_t* data;
   uv_http_req_t* req;
 
@@ -369,9 +369,11 @@ int uv_http_on_field(uv_http_t* http, uv_http_header_state_t next,
         return 0;
       break;
     case kUVHTTPHeaderStateComplete:
-      if (req->on_headers_complete == NULL)
+      if (req->on_headers_complete == NULL) {
+        *res = 0;
         return 0;
-      req->on_headers_complete(req);
+      }
+      *res = req->on_headers_complete(req);
       break;
     default:
       break;
@@ -405,7 +407,7 @@ int uv_http_on_url(http_parser* parser, const char* value,
 
   http = container_of(parser, uv_http_t, parser);
 
-  err = uv_http_on_field(http, kUVHTTPHeaderStateURL, value, length);
+  err = uv_http_on_field(http, kUVHTTPHeaderStateURL, value, length, NULL);
   if (err != 0) {
     uv_http_error(http, err);
     return -1;
@@ -417,15 +419,16 @@ int uv_http_on_url(http_parser* parser, const char* value,
 int uv_http_on_headers_complete(http_parser* parser) {
   uv_http_t* http;
   int err;
+  int res;
 
   http = container_of(parser, uv_http_t, parser);
 
-  err = uv_http_on_field(http, kUVHTTPHeaderStateComplete, NULL, 0);
+  err = uv_http_on_field(http, kUVHTTPHeaderStateComplete, NULL, 0, &res);
   if (err != 0) {
     uv_http_error(http, err);
     return -1;
   }
-  return 0;
+  return res;
 }
 
 
@@ -434,7 +437,7 @@ int uv_http_on_header_field(http_parser* parser, const char* value,
   uv_http_t* http;
   int err;
   http = container_of(parser, uv_http_t, parser);
-  err = uv_http_on_field(http, kUVHTTPHeaderStateField, value, length);
+  err = uv_http_on_field(http, kUVHTTPHeaderStateField, value, length, NULL);
   if (err != 0) {
     uv_http_error(http, err);
     return -1;
@@ -448,7 +451,7 @@ int uv_http_on_header_value(http_parser* parser, const char* value,
   uv_http_t* http;
   int err;
   http = container_of(parser, uv_http_t, parser);
-  err = uv_http_on_field(http, kUVHTTPHeaderStateValue, value, length);
+  err = uv_http_on_field(http, kUVHTTPHeaderStateValue, value, length, NULL);
   if (err != 0) {
     uv_http_error(http, err);
     return -1;
