@@ -107,7 +107,7 @@ static void uv_http_link_read_cb_override(uv_link_t* link,
     uv_http_error(http, err);
 
   shared_storage_busy = 0;
-  if (buf->base != shared_storage)
+  if (buf != NULL && buf->base != shared_storage)
     free(buf->base);
 }
 
