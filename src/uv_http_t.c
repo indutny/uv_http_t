@@ -196,7 +196,7 @@ void uv_http_error(uv_http_t* http, int err) {
   uv_http_req_t* req;
 
   for (req = http->active_req; req != NULL; req = req->next)
-    uv_http_req_error(http, req, UV_ECANCELED);
+    uv_http_req_error(http, req, UV_EPROTO);
 
   if ((http->reading & kUVHTTPSideConnection) != 0)
     uv_link_propagate_read_cb((uv_link_t*) http, err, NULL);
