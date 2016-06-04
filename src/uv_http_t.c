@@ -128,7 +128,7 @@ int uv_http_consume(uv_http_t* http, const char* data, size_t size) {
       http->parser.http_errno != HPE_PAUSED) {
     /* Parser error */
     /* TODO(indutny): error message? */
-    return UV_EPROTO;
+    return kUVHTTPErrParserExecute;
   }
 
   CHECK(parsed <= size, "Parsed more than given!");
@@ -197,7 +197,7 @@ void uv_http_error(uv_http_t* http, int err) {
   uv_http_req_t* req;
 
   for (req = http->active_req; req != NULL; req = req->next)
-    uv_http_req_error(http, req, UV_EPROTO);
+    uv_http_req_error(http, req, kUVHTTPErrConnectionReset);
 
   if ((http->reading & kUVHTTPSideConnection) != 0)
     uv_link_propagate_read_cb((uv_link_t*) http, err, NULL);
@@ -353,7 +353,7 @@ int uv_http_on_field(uv_http_t* http, uv_http_header_state_t next,
 
     /* Here `err` is a parser-like error */
     if (err != 0)
-      return UV_EPROTO;
+      return kUVHTTPErrReqCallback;
 
     uv_http_data_dequeue(data, data->size);
     http->pending.header_state = next;

@@ -112,6 +112,29 @@ static void uv_http_link_read_cb_override(uv_link_t* link,
 }
 
 
+/* NOTE: Intentionally not static */
+const char* uv_http_link_strerror(uv_link_t* link, int err) {
+  switch (err) {
+    case kUVHTTPErrShutdownNotChunked:
+      return "uv_http_t: can't shutdown request that isn't chunked";
+    case kUVHTTPErrCloseWithoutShutdown:
+      return "uv_http_t: can't close chunked request without shutdown";
+    case kUVHTTPErrDoubleRespond:
+      return "uv_http_t: double respond attempt";
+    case kUVHTTPErrResponseRequired:
+      return "uv_http_t: response required before sending data";
+    case kUVHTTPErrParserExecute:
+      return "uv_http_t: http_parser_execute() error";
+    case kUVHTTPErrConnectionReset:
+      return "uv_http_t: connection reset";
+    case kUVHTTPErrReqCallback:
+      return "uv_http_t: request callback failure";
+    default:
+      return NULL;
+  }
+}
+
+
 uv_link_methods_t uv_http_methods = {
   .read_start = uv_http_link_read_start,
   .read_stop = uv_http_link_read_stop,
@@ -120,6 +143,7 @@ uv_link_methods_t uv_http_methods = {
   .try_write = uv_http_link_try_write,
   .shutdown = uv_http_link_shutdown,
   .close = uv_http_link_close,
+  .strerror = uv_http_link_strerror,
 
   .alloc_cb_override = uv_http_link_alloc_cb_override,
   .read_cb_override = uv_http_link_read_cb_override

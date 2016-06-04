@@ -112,7 +112,7 @@ static int uv_http_req_link_shutdown(uv_link_t* link,
 
   /* TODO(indutny): invoke callback for non-chunked */
   if (!req->chunked || !req->has_response || req->shutdown)
-    return UV_EPROTO;
+    return kUVHTTPErrShutdownNotChunked;
 
   buf = uv_buf_init("0\r\n\r\n", 5);
   err = uv_link_propagate_write(req->http->parent, source, &buf, 1, NULL, cb,
@@ -135,7 +135,7 @@ static void uv_http_req_link_close(uv_link_t* link, uv_link_t* source,
 
   /* Request wasn't shutdown */
   if (!req->shutdown) {
-    uv_http_error(req->http, UV_EPROTO);
+    uv_http_error(req->http, kUVHTTPErrCloseWithoutShutdown);
     uv_http_on_req_finish(req->http, req);
   }
 
@@ -153,5 +153,6 @@ uv_link_methods_t uv_http_req_methods = {
   .write = uv_http_req_link_write,
   .try_write = uv_http_req_link_try_write,
   .shutdown = uv_http_req_link_shutdown,
-  .close = uv_http_req_link_close
+  .close = uv_http_req_link_close,
+  .strerror = uv_http_link_strerror
 };

@@ -55,6 +55,16 @@ enum uv_http_side_e {
 };
 typedef enum uv_http_side_e uv_http_side_t;
 
+enum uv_http_error_e {
+  kUVHTTPErrShutdownNotChunked = UV_ERRNO_MAX - 1,
+  kUVHTTPErrCloseWithoutShutdown = UV_ERRNO_MAX - 2,
+  kUVHTTPErrDoubleRespond = UV_ERRNO_MAX - 3,
+  kUVHTTPErrResponseRequired = UV_ERRNO_MAX - 4,
+  kUVHTTPErrParserExecute = UV_ERRNO_MAX - 5,
+  kUVHTTPErrConnectionReset = UV_ERRNO_MAX - 6,
+  kUVHTTPErrReqCallback = UV_ERRNO_MAX - 7
+};
+
 static const unsigned int kReadingMask = kUVHTTPSideRequest |
                                          kUVHTTPSideConnection;
 
@@ -72,6 +82,8 @@ int uv_http_read_stop(uv_http_t* http, uv_http_side_t side);
 
 void uv_http_maybe_close(uv_http_t* http);
 
+const char* uv_http_link_strerror(uv_link_t* link, int err);
+
 /* Request related */
 void uv_http_close_req(uv_http_t* http, uv_http_req_t* req);
 void uv_http_req_error(uv_http_t* http, uv_http_req_t* req, int err);
@@ -83,5 +95,6 @@ int uv_http_req_prepare_write(uv_http_req_t* req,
                               uv_buf_t* storage, unsigned int nstorage,
                               const uv_buf_t* bufs, unsigned int nbufs,
                               uv_buf_t** pbufs, unsigned int* npbufs);
+
 
 #endif  /* SRC_PRIVATE_H_ */

@@ -93,7 +93,7 @@ int uv_http_req_respond(uv_http_req_t* req,
 
   /* Double respond */
   if (req->has_response)
-    return UV_EPROTO;
+    return kUVHTTPErrDoubleRespond;
 
   if (req->http->active_req != req)
     return UV_EAGAIN;
@@ -185,7 +185,7 @@ int uv_http_req_prepare_write(uv_http_req_t* req,
 
   /* Response is required before writes */
   if (!req->has_response)
-    return UV_EPROTO;
+    return kUVHTTPErrResponseRequired;
 
   total = 0;
   for (i = 0; i < nbufs; i++)
