@@ -7,9 +7,15 @@
       "src"
     ],
 
+    "variables": {
+      "gypkg_deps": [
+        "git://github.com/libuv/libuv.git#v1.9.1:uv.gyp:libuv",
+        "git://github.com/indutny/uv_link_t:uv_link_t.gyp:uv_link_t",
+      ],
+    },
+
     "dependencies": [
-      "deps/libuv/uv.gyp:libuv",
-      "deps/uv_link_t/uv_link_t.gyp:uv_link_t",
+      "<!@(gypkg deps <(gypkg_deps))",
       "../uv_http_t.gyp:uv_http_t",
     ],
 

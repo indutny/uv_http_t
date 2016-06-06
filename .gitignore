@@ -3,3 +3,5 @@ test/deps/bud
 test/deps/uv_link_t
 tools/gyp
 out/
+node_modules/
+gypkg_deps/
