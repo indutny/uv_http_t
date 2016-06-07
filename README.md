@@ -1,5 +1,5 @@
 # uv_http_t
-[![Build Status](https://secure.travis-ci.org/indutny/uv_http_t.png)](http://travis-ci.org/indutny/uv_http_t)
+[![Build Status](https://secure.travis-ci.org/indutny/uv_http_t.svg)](http://travis-ci.org/indutny/uv_http_t)
 [![GitHub version](https://badge.fury.io/gh/indutny%2Fuv_http_t.svg)](https://badge.fury.io/gh/indutny%2Fuv_http_t)
 
 **HIGHLY UNSTABLE**
