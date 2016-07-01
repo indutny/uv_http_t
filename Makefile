@@ -5,7 +5,6 @@ example: dist
 	./out/Release/uv_http_t-example
 
 dist:
-	gypkg gen uv_http_t.gyp
-	make -C out/ -j8
+	gypkg build uv_http_t.gyp
 
 .PHONY: test example dist
