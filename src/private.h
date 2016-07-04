@@ -68,8 +68,8 @@ enum uv_http_error_e {
 static const unsigned int kReadingMask = kUVHTTPSideRequest |
                                          kUVHTTPSideConnection;
 
-uv_link_methods_t uv_http_methods;
-uv_link_methods_t uv_http_req_methods;
+extern uv_link_methods_t uv_http_methods;
+extern uv_link_methods_t uv_http_req_methods;
 
 void uv_http_destroy(uv_http_t* http, uv_link_t* source, uv_link_close_cb cb);
 
