@@ -2,6 +2,7 @@
   "variables": {
     "gypkg_deps": [
       "git://github.com/libuv/libuv.git@^1.9.0 => uv.gyp:libuv",
+      "git://github.com/nodejs/http-parser.git@^2.7.0 [gpg] => http_parser.gyp:http_parser",
       "git://github.com/indutny/uv_link_t@^1.0.0 [gpg] => uv_link_t.gyp:uv_link_t",
     ],
   },
@@ -16,7 +17,6 @@
 
     "dependencies": [
       "<!@(gypkg deps <(gypkg_deps))",
-      "deps/http-parser/http_parser.gyp:http_parser",
     ],
 
     "include_dirs": [
