@@ -4,6 +4,10 @@
 #include "uv.h"
 #include "uv_link_t.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif  /* __cplusplus */
+
 /* NOTE: can be cast to `uv_link_t` */
 typedef struct uv_http_s uv_http_t;
 typedef struct uv_http_req_s uv_http_req_t;
@@ -107,5 +111,9 @@ UV_EXTERN int uv_http_req_respond(uv_http_req_t* req,
                                   const uv_buf_t header_fields[],
                                   const uv_buf_t header_values[],
                                   unsigned int header_count);
+
+#ifdef __cplusplus
+}
+#endif  /* __cplusplus */
 
 #endif  /* INCLUDE_UV_LINK_H_ */
